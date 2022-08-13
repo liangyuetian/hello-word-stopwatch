@@ -121,10 +121,10 @@
                 return btnTextMap.countBtn.doing
             }
 
-            if (countList.length === 0) { // 如果没有计次过，则显示计次
-                return btnTextMap.countBtn.init
-            } else {
+            if (state.startUpTimestamp !== 0) {
                 return btnTextMap.countBtn.other
+            } else {
+                return btnTextMap.countBtn.init
             }
         }
 
