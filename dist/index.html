@@ -75,12 +75,7 @@
         <div id="count" class="operate_btn">计次</div>
         <div id="start" class="operate_btn">启动</div>
     </div>
-    <div id="count_list">
-        <div>
-            <span>计次5</span>
-            <span>00:00:00</span>
-        </div>
-    </div>
+    <div id="count_list"></div>
     <script>
         const $ = document.querySelector.bind(document)
         const timeDom = $('#time') // 计次按钮
@@ -93,10 +88,10 @@
             startUpTimestamp: 0, // 点击开始的时间戳
             stopTimestamp: 0, // 点击开始的时间戳
             countList: [
-                {
-                    timestamp: Date.now(),
-                    formatText: ''
-                }
+                // {
+                //     timestamp: Date.now(),
+                //     formatText: ''
+                // }
             ], // 计次的列表
         }
         const btnTextMap = { // 不同的状态按钮文案
@@ -144,7 +139,7 @@
 
         function formatTime(now, startTime) {
             const millisecond = now - startTime // 毫秒
-            const sx = millisecond % 100
+            const sx = (millisecond / 1000).toFixed(2).split('.')[1]
             const s = Math.floor(millisecond / 1000) % 60 //  秒
             const m = Math.floor(millisecond / 1000 / 60) % 60
             return `${prefixInteger(m)}:${prefixInteger(s)}:${prefixInteger(sx)}`
@@ -174,7 +169,7 @@
 
         function updateTimeText(clear = false) {
             if (!clear) {
-                timeDom.innerText = formatTime(Date.now(), state.stopTimestamp)
+                timeDom.innerText = formatTime(Date.now(), state.startUpTimestamp)
             } else {
                 timeDom.innerText = '00:00:00'
             }
@@ -197,7 +192,6 @@
         // 开始计时
         function start() {
             console.log('开始计时')
-            reset()
             state.startUpTimestamp = Date.now()
             scheduler.update = function () {
                 updateTimeText()
@@ -236,6 +230,7 @@
             state.stopTimestamp = 0
             updateCountList()
             updateBtnText()
+            updateTimeText(true)
         }
 
         startUpDom.addEventListener('click', () => {
