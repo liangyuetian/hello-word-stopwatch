@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 414px;
+        height: 896px;
+    }
+
+    body {
+        background-size: 100% 100%;
+        background-color: #000;
+    }
+
+    #time {
+        margin-top: 196px;
+        text-align: center;
+        font-size: 90px;
+        font-weight: lighter;
+        color: #f8f8f8;
+    }
+
+    .operate_groups {
+        display: flex;
+        justify-content: space-between;
+        margin: 100px 17px 0;
+        padding-bottom: 16px;
+        color: #818181;
+        border-bottom: 1px solid #2f2e2e;
+    }
+
+    .operate_btn {
+        width: 82px;
+        height: 82px;
+        text-align: center;
+        line-height: 82px;
+        border-radius: 50%;
+    }
+
+    #count {
+        background-color: #333333;
+        color: white;
+    }
+
+    #start {
+        background-color: #112913;
+        color: #72c56d;
+    }
+
+    #count_list > div {
+        display: flex;
+        justify-content: space-between;
+        margin: 0 17px;
+        padding: 11px 0;
+        color: white;
+        font-size: 16px;
+        border-bottom: 1px solid #2f2e2e;
+    }
+</style>
+<body>
+    <div id="time">
+        00:00:00
+    </div>
+    <div class="operate_groups">
+        <div id="count" class="operate_btn">计次</div>
+        <div id="start" class="operate_btn">启动</div>
+    </div>
+    <div id="count_list">
+        <div>
+            <span>计次5</span>
+            <span>00:00:00</span>
+        </div>
+    </div>
+    <script>
+        const $ = document.querySelector.bind(document)
+        const timeDom = $('#time') // 计次按钮
+        const countBtnDom = $('#count') // 计次按钮
+        const startUpDom = $('#start') // 启动按钮
+        const countListDom = $('#count_list') // 启动按钮
+        const state = { // 当前状态的数据
+            status: 'init', // 当前的状态: init 未开始；doing 计时中；
+            firstStart: false, // 是否是第一次启动
+            startUpTimestamp: 0, // 点击开始的时间戳
+            stopTimestamp: 0, // 点击开始的时间戳
+            countList: [
+                {
+                    timestamp: Date.now(),
+                    formatText: ''
+                }
+            ], // 计次的列表
+        }
+        const btnTextMap = { // 不同的状态按钮文案
+            countBtn: {
+                init: '计次',
+                doing: '计次',
+                other: '复位',
+            },
+            startUp: {
+                init: '启动',
+                doing: '停止',
+            }
+        }
+
+        function getCountBtnText() {
+            const {countList, status} = state
+            if (status === 'doing') { // 如果正在计时，那么始终返回计次
+                return btnTextMap.countBtn.doing
+            }
+
+            if (countList.length === 0) { // 如果没有计次过，则显示计次
+                return btnTextMap.countBtn.init
+            } else {
+                return btnTextMap.countBtn.other
+            }
+        }
+
+        function getStartUpText() {
+            const {countList, status} = state
+            if (status === 'doing') { // 如果正在计时，那么始终返回计次
+                return btnTextMap.startUp.doing
+            } else {
+                return btnTextMap.startUp.init
+            }
+        }
+
+        function updateBtnText() {
+            countBtnDom.innerText = getCountBtnText()
+            startUpDom.innerText = getStartUpText()
+        }
+
+        function prefixInteger(num, length = 2) {
+            return (Array(length).join('0') + num).slice(-length);
+        }
+
+        function formatTime(now, startTime) {
+            const millisecond = now - startTime // 毫秒
+            const sx = millisecond % 100
+            const s = Math.floor(millisecond / 1000) % 60 //  秒
+            const m = Math.floor(millisecond / 1000 / 60) % 60
+            return `${prefixInteger(m)}:${prefixInteger(s)}:${prefixInteger(sx)}`
+        }
+
+        function createCountItem(name, time) {
+            const box = document.createElement('div')
+            const textName = document.createElement('span')
+            const textTime = document.createElement('span')
+            textName.innerText = name
+            textTime.innerText = time
+            box.appendChild(textName)
+            box.appendChild(textTime)
+            return box
+        }
+
+        function updateCountList() {
+            const fragment = document.createDocumentFragment()
+            state.countList.map((item ,index) => {
+                return createCountItem(`计次${index + 1}`, item.formatText)
+            }).reverse().forEach(dom => {
+                fragment.appendChild(dom)
+            })
+            countListDom.innerHTML = ''
+            countListDom.appendChild(fragment)
+        }
+
+        function updateTimeText(clear = false) {
+            if (!clear) {
+                timeDom.innerText = formatTime(Date.now(), state.stopTimestamp)
+            } else {
+                timeDom.innerText = '00:00:00'
+            }
+        }
+
+        const scheduler = {
+            id: 0,
+            start(interval = 16) {
+                this.id = setInterval(() => {
+                    this.update && this.update()
+                }, interval)
+            },
+            stop() {
+                clearInterval(this.id)
+                this.update = null
+            },
+            update: null
+        }
+
+        // 开始计时
+        function start() {
+            console.log('开始计时')
+            reset()
+            state.startUpTimestamp = Date.now()
+            scheduler.update = function () {
+                updateTimeText()
+            }
+            scheduler.start(100)
+            updateCountList()
+            updateBtnText()
+        }
+
+        // 停止计时
+        function stop() {
+            console.log('停止计时')
+            state.stopTimestamp = Date.now()
+            scheduler.stop()
+            updateCountList()
+            updateBtnText()
+        }
+
+        // 计次
+        function count() {
+            console.log('计次')
+            const now = Date.now()
+            state.countList.push({
+                timestamp: Date.now(),
+                formatText: formatTime(now, state.startUpTimestamp)
+            })
+            updateCountList()
+            updateBtnText()
+        }
+
+        // 复位
+        function reset() {
+            console.log('复位')
+            state.countList = []
+            state.startUpTimestamp = 0
+            state.stopTimestamp = 0
+            updateCountList()
+            updateBtnText()
+        }
+
+        startUpDom.addEventListener('click', () => {
+            if (state.status === 'init') {
+                state.status = 'doing'
+                start()
+            } else if (state.status === 'doing') {
+                state.status = 'init'
+                stop()
+            }
+            updateBtnText() // 设置文案
+
+        })
+        countBtnDom.addEventListener('click', () => {
+            if (state.status === 'init') { // 复位
+                reset()
+            } else {
+                count()
+            }
+            updateBtnText() // 设置文案
+        })
+
+    </script>
+</body>
+</html>
